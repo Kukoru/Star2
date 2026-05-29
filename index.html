@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=0.85, user-scalable=yes">
+    <title>BI Dashboard Mockup - Расширенная аналитика закупок</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+    <!-- Индикатор загрузки -->
+    <div id="loader-overlay" class="loader-overlay" style="display: none;">
+        <div class="loader-spinner"></div>
+        <div class="loader-text">Загрузка данных...</div>
+    </div>
+
+    <header>
+        <div class="logo">
+            <i class="fas fa-chart-line"></i> BI Mockup
+        </div>
+        <h1>Приборная панель анализа закупок</h1>
+        <div class="header-controls">
+            <button id="theme-toggle" class="theme-toggle-btn" title="Светлая/Тёмная тема">
+                <i class="fas fa-moon"></i>
+            </button>
+            <div class="last-update">
+                <i class="fas fa-sync-alt"></i> Обновлено: <span id="last-update-time">только что</span>
+            </div>
+            <div id="auto-refresh-indicator" class="auto-refresh-indicator top-right">
+                <i class="fas fa-sync-alt fa-fw"></i>
+                <span id="auto-refresh-countdown">120</span> сек
+                <button id="cancel-auto-refresh" class="cancel-refresh-btn"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+    </header>
+
+    <aside class="sidebar">
+        <nav>
+            <ul>
+                <li class="nav-item" data-page="supplier-analytics">
+                    <i class="fas fa-truck"></i><br>Аналитика<br>Поставщиков
+                </li>
+                <li class="nav-item" data-page="budget-pf">
+                    <i class="fas fa-chart-pie"></i><br>План-факт<br>Бюджета
+                </li>
+                <li class="nav-item" data-page="order-recommendations">
+                    <i class="fas fa-shopping-cart"></i><br>Рекомендации<br>по закупкам
+                </li>
+                <li class="nav-item" data-page="forecast">
+                    <i class="fas fa-chart-line"></i><br>Прогнозы<br>и аналитика
+                </li>
+            </ul>
+        </nav>
+    </aside>
+
+    <main class="content">
+        <!-- Секция: Аналитика Поставщиков -->
+        <section id="supplier-analytics" class="page active">
+            <h2><i class="fas fa-chart-line"></i> Анализ Поставщиков</h2>
+            <div class="filters">
+                <div class="filter-group">
+                    <i class="fas fa-calendar"></i>
+                    <label for="supplier-period">Период:</label>
+                    <select id="supplier-period">
+                        <option value="month">Месяц</option>
+                        <option value="quarter">Квартал</option>
+                        <option value="year">Год</option>
+                        <option value="custom">Свой период</option>
+                    </select>
+                </div>
+                <div class="filter-group date-range-group" id="date-range-group" style="display: none;">
+                    <i class="fas fa-calendar-alt"></i>
+                    <label>С:</label>
+                    <input type="date" id="date-from" class="date-input">
+                    <label>По:</label>
+                    <input type="date" id="date-to" class="date-input">
+                </div>
+                <div class="filter-group">
+                    <i class="fas fa-tags"></i>
+                    <label for="supplier-category">Категория:</label>
+                    <select id="supplier-category">
+                        <option value="all">Все</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <i class="fas fa-store"></i>
+                    <label for="supplier-branch">Филиал:</label>
+                    <select id="supplier-branch">
+                        <option value="all">Все</option>
+                    </select>
+                </div>
+                <button id="apply-supplier-filters"><i class="fas fa-filter"></i> Применить</button>
+                <button id="save-filters-btn" class="save-filters-btn" title="Сохранить текущие фильтры">
+                    <i class="fas fa-bookmark"></i> Сохранить фильтры
+                </button>
+                <button id="import-suppliers-btn" class="import-btn"><i class="fas fa-file-import"></i> Импорт</button>
+            </div>
+            <div class="dashboard-widgets">
+                <div class="kpi-cards" id="supplier-kpi-cards"></div>
+                
+                <div class="widget chart-widget">
+                    <h3><i class="fas fa-chart-line"></i> Тренд цен поставщиков</h3>
+                    <canvas id="price-trend-chart"></canvas>
+                </div>
+                
+                <div class="widget chart-widget">
+                    <h3><i class="fas fa-chart-scatter"></i> Цена vs Срок поставки</h3>
+                    <canvas id="price-delivery-chart"></canvas>
+                </div>
+                
+                <div class="widget chart-widget">
+                    <h3><i class="fas fa-trophy"></i> Топ-5 поставщиков по рейтингу</h3>
+                    <canvas id="top-suppliers-chart"></canvas>
+                </div>
+                
+                <div class="widget table-widget">
+                    <div class="table-header-actions">
+                        <h3 style="margin:0"><i class="fas fa-medal"></i> KPI Поставщиков</h3>
+                        <div class="table-controls">
+                            <button id="toggle-supplier-columns" class="small-btn" title="Настроить столбцы">
+                                <i class="fas fa-columns"></i>
+                            </button>
+                            <button class="add-supplier-btn" id="add-supplier-btn">
+                                <i class="fas fa-plus"></i> Добавить
+                            </button>
+                        </div>
+                    </div>
+                    <div class="supplier-table-container">
+                        <table id="supplier-kpi-table">
+                            <thead>
+                                <tr>
+                                    <th class="sortable-header column-toggle" data-col="name">Поставщик</th>
+                                    <th class="sortable-header column-toggle" data-col="price">Ср. цена</th>
+                                    <th class="sortable-header column-toggle" data-col="delivery">Ср. срок (дни)</th>
+                                    <th class="sortable-header column-toggle" data-col="missed">% Просрочек</th>
+                                    <th class="sortable-header column-toggle" data-col="rating">Рейтинг</th>
+                                    <th class="sortable-header column-toggle" data-col="category">Категория</th>
+                                    <th class="sortable-header column-toggle" data-col="branch">Филиал</th>
+                                    <th class="sortable-header" data-col="actions">Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Секция: План-факт Бюджета -->
+        <section id="budget-pf" class="page">
+            <h2><i class="fas fa-chart-bar"></i> План-факт Бюджета Закупок</h2>
+            <div class="filters">
+                <div class="filter-group">
+                    <i class="fas fa-calendar-alt"></i>
+                    <label for="budget-period">Период:</label>
+                    <select id="budget-period">
+                        <option value="month">Месяц</option>
+                        <option value="quarter">Квартал</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <i class="fas fa-store"></i>
+                    <label for="budget-branch">Филиал:</label>
+                    <select id="budget-branch">
+                        <option value="all">Все</option>
+                    </select>
+                </div>
+                <button id="apply-budget-filters"><i class="fas fa-filter"></i> Применить</button>
+                <button id="compare-period-btn" class="compare-btn"><i class="fas fa-chart-line"></i> Сравнить с прошлым периодом</button>
+                <button id="import-budget-btn" class="import-btn"><i class="fas fa-file-import"></i> Импорт</button>
+            </div>
+            <div class="dashboard-widgets">
+                <div class="kpi-cards" id="budget-kpi-cards"></div>
+                
+                <div class="widget chart-widget">
+                    <h3><i class="fas fa-chart-line"></i> Исполнение бюджета по месяцам</h3>
+                    <canvas id="budget-execution-chart"></canvas>
+                </div>
+                
+                <!-- Два графика в одной строке: Выполнение бюджета + Распределение -->
+                <div style="display: flex; gap: 20px; width: 100%;">
+                    <div class="widget" style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+                        <h3><i class="fas fa-tachometer-alt"></i> Выполнение бюджета</h3>
+                        <div class="gauge-container">
+                            <canvas id="budget-gauge-chart"></canvas>
+                        </div>
+                    </div>
+                    <div class="widget chart-widget" style="flex: 1;">
+                        <h3><i class="fas fa-chart-pie"></i> Распределение бюджета по филиалам</h3>
+                        <canvas id="budget-distribution-chart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="widget table-widget">
+                    <h3><i class="fas fa-table"></i> Детализация бюджета</h3>
+                    <table id="budget-detail-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable-header">Филиал</th>
+                                <th class="sortable-header">Период</th>
+                                <th class="sortable-header">Запланировано</th>
+                                <th class="sortable-header">Фактически</th>
+                                <th class="sortable-header">Остаток</th>
+                                <th class="sortable-header">% Исполнения</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Секция: Рекомендации по Закупкам -->
+        <section id="order-recommendations" class="page">
+            <h2><i class="fas fa-lightbulb"></i> Рекомендации по Закупкам</h2>
+            <div class="filters">
+                <div class="filter-group">
+                    <i class="fas fa-store"></i>
+                    <label for="order-branch">Филиал:</label>
+                    <select id="order-branch"></select>
+                </div>
+                <div class="filter-group">
+                    <i class="fas fa-chart-line"></i>
+                    <label for="forecast-multiplier">Коэф. прогноза:</label>
+                    <input type="range" id="forecast-multiplier" min="0.5" max="2" step="0.05" value="1">
+                    <span id="multiplier-value">1.0</span>
+                </div>
+            </div>
+            <div class="dashboard-widgets">
+                <div class="widget table-widget full-width">
+                    <h3><i class="fas fa-clipboard-list"></i> Предложения по Заказам</h3>
+                    <table id="order-proposal-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable-header">Товар</th>
+                                <th class="sortable-header">Текущий остаток</th>
+                                <th class="sortable-header">Прогноз продаж</th>
+                                <th class="sortable-header">В пути</th>
+                                <th class="sortable-header">Рекомендуемое</th>
+                                <th class="sortable-header">Введенное</th>
+                                <th class="sortable-header">Основа</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                    <div class="order-actions">
+                        <button id="transfer-to-1c"><i class="fas fa-exchange-alt"></i> Перенести в 1С</button>
+                        <button id="calculate-roi" class="roi-btn"><i class="fas fa-chart-line"></i> Рассчитать ROI</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Секция: Прогнозы и аналитика -->
+        <section id="forecast" class="page">
+            <h2><i class="fas fa-chart-line"></i> Прогнозы и аналитика</h2>
+            <div class="filters">
+                <div class="filter-group">
+                    <i class="fas fa-chart-line"></i>
+                    <label for="forecast-months">Период прогноза:</label>
+                    <select id="forecast-months">
+                        <option value="3">3 месяца</option>
+                        <option value="6" selected>6 месяцев</option>
+                        <option value="12">12 месяцев</option>
+                    </select>
+                </div>
+                <button id="apply-forecast" class="forecast-btn"><i class="fas fa-chart-line"></i> Рассчитать прогноз</button>
+            </div>
+            <div class="dashboard-widgets">
+                <div class="widget chart-widget">
+                    <h3><i class="fas fa-chart-line"></i> Прогноз бюджета (линия тренда)</h3>
+                    <canvas id="budget-forecast-chart"></canvas>
+                </div>
+                
+                <div class="widget">
+                    <h3><i class="fas fa-sliders-h"></i> Анализ "Что если"</h3>
+                    <div class="whatif-controls">
+                        <div class="whatif-item">
+                            <label>Изменить план на:</label>
+                            <input type="number" id="whatif-planned" value="0" step="10000">
+                            <button id="apply-whatif" class="whatif-btn">Применить</button>
+                        </div>
+                        <div id="whatif-result" class="whatif-result"></div>
+                    </div>
+                </div>
+                
+                <div class="widget chart-widget">
+                    <h3><i class="fas fa-exclamation-triangle"></i> Прогноз просрочек поставок</h3>
+                    <canvas id="missed-forecast-chart"></canvas>
+                </div>
+                
+                <div class="widget table-widget">
+                    <h3><i class="fas fa-chart-line"></i> ROI поставщиков</h3>
+                    <table id="roi-table">
+                        <thead>
+                            <tr>
+                                <th>Поставщик</th>
+                                <th>ROI (%)</th>
+                                <th>Эффективность</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div class="floating-buttons">
+        <button class="export-btn" id="global-export-excel-btn" title="Экспорт текущей страницы в Excel">
+            <i class="fas fa-file-excel"></i> Excel
+        </button>
+     </div>
+
+    <!-- Модальные окна -->
+    <div id="supplier-modal" class="modal">
+        <div class="modal-content">
+            <h3><i class="fas fa-truck"></i> Добавить поставщика</h3>
+            <input type="text" id="new-supplier-name" placeholder="Название">
+            <input type="number" id="new-supplier-price" placeholder="Цена">
+            <input type="number" id="new-supplier-delivery" placeholder="Срок (дни)">
+            <input type="number" id="new-supplier-missed" placeholder="% Просрочек">
+            <input type="number" id="new-supplier-rating" placeholder="Рейтинг" step="0.1" min="1" max="5">
+            <select id="new-supplier-category">
+                <option value="electronics">Электроника</option>
+                <option value="home-appliances">Бытовая техника</option>
+                <option value="stationery">Канцтовары</option>
+            </select>
+            <select id="new-supplier-branch">
+                <option value="филиал-москва">Москва</option>
+                <option value="филиал-питер">Питер</option>
+                <option value="филиал-новосибирск">Новосибирск</option>
+            </select>
+            <div class="modal-buttons">
+                <button id="save-supplier-btn"><i class="fas fa-save"></i> Сохранить</button>
+                <button id="close-modal-btn"><i class="fas fa-times"></i> Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="supplier-detail-modal" class="modal detail-modal">
+        <div class="modal-content">
+            <h3><i class="fas fa-info-circle"></i> Детальная карточка поставщика</h3>
+            <div id="supplier-detail-content"></div>
+            <div class="modal-buttons">
+                <button id="close-detail-modal"><i class="fas fa-times"></i> Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="column-settings-modal" class="modal">
+        <div class="modal-content">
+            <h3><i class="fas fa-columns"></i> Настройка столбцов</h3>
+            <div id="column-settings-list"></div>
+            <div class="modal-buttons">
+                <button id="save-column-settings"><i class="fas fa-save"></i> Сохранить</button>
+                <button id="reset-column-settings"><i class="fas fa-undo"></i> Сброс</button>
+                <button id="close-column-modal"><i class="fas fa-times"></i> Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="import-suppliers-file" accept=".json,.xlsx,.xls" style="display: none">
+    <input type="file" id="import-budget-file" accept=".json,.xlsx,.xls" style="display: none">
+
+    <script src="script.js"></script>
+</body>
+</html>
