@@ -170,8 +170,8 @@ localStorage.clear();
 
 ## 📧 Контакты
 
-Автор: [Ваше Имя](https://github.com/your-username)  
-Email: your.email@example.com
+Автор: [Кутлунин Константин](https://github.com/Kukoru)  
+Email: kukoru@vk.ru
 
 ---
 
