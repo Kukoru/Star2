@@ -115,24 +115,6 @@ bi-dashboard/
 ]
 ```
 
-## 🎨 Скриншоты
-
-<details>
-<summary>Нажмите, чтобы раскрыть</summary>
-
-### Страница аналитики поставщиков
-![Suppliers Page](https://via.placeholder.com/800x400?text=Suppliers+Analytics)
-
-### План-факт бюджет
-![Budget Page](https://via.placeholder.com/800x400?text=Budget+Plan-Fact)
-
-### Рекомендации по закупкам
-![Recommendations Page](https://via.placeholder.com/800x400?text=Order+Recommendations)
-
-### Прогнозы
-![Forecast Page](https://via.placeholder.com/800x400?text=Forecasts)
-</details>
-
 ## 🛠️ Администрирование
 
 ### Локальное хранение данных
