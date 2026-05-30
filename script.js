@@ -16,7 +16,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentDay = today.getDate();
         
         suppliersData.forEach((supplier, index) => {
-            // Создаём дату: текущий год, текущий месяц, день = текущий день - index*2 (чтобы даты были разные)
             let day = currentDay - (index * 2);
             if (day < 1) day = 1 + index;
             const date = new Date(currentYear, currentMonth, day);
@@ -24,7 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Вызываем обновление дат
     updateSupplierDatesToCurrent();
     
     let budgetData = [
@@ -42,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let nextId = 6;
     let autoRefreshInterval = null;
     let autoRefreshEnabled = true;
-    let refreshCountdown = 120;  // 2 минуты
+    let refreshCountdown = 120;
     
     const categoryNames = {
         "electronics": "Электроника",
@@ -56,10 +54,11 @@ document.addEventListener('DOMContentLoaded', () => {
         "филиал-новосибирск": "Филиал Новосибирск"
     };
     
+    // ИСПРАВЛЕННЫЕ ДАННЫЕ - с артикулами в скобках для правильной передачи в 1С
     const orderProposals = [
-        { sku: "ELEC-001", name: "Смартфон XYZ", stock: 10, forecast: 25, inTransit: 5, recommended: 10, basis: "Прогноз+Запас" },
-        { sku: "HOME-010", name: "Чайник", stock: 5, forecast: 15, inTransit: 0, recommended: 10, basis: "Прогноз" },
-        { sku: "OFFICE-101", name: "Ручка синяя", stock: 100, forecast: 200, inTransit: 50, recommended: 50, basis: "Прогноз+Запас" }
+        { sku: "ELEC-001", name: "Смартфон XYZ (ELEC-001)", stock: 10, forecast: 25, inTransit: 5, recommended: 10, basis: "Прогноз+Запас" },
+        { sku: "HOME-010", name: "Чайник (HOME-010)", stock: 5, forecast: 15, inTransit: 0, recommended: 10, basis: "Прогноз" },
+        { sku: "OFFICE-101", name: "Ручка синяя (OFFICE-101)", stock: 100, forecast: 200, inTransit: 50, recommended: 50, basis: "Прогноз+Запас" }
     ];
     
     let chartInstances = {
@@ -406,7 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showNotification('Данные поставщика обновлены', 'success');
     }
     
-    // ========== ФИЛЬТРАЦИЯ ПО ДАТАМ (ОСНОВНАЯ ЛОГИКА) ==========
+    // ========== ФИЛЬТРАЦИЯ ПО ДАТАМ ==========
     
     function getFilteredSuppliers() {
         const category = document.getElementById('supplier-category')?.value || 'all';
@@ -417,17 +416,14 @@ document.addEventListener('DOMContentLoaded', () => {
         
         let filtered = [...suppliersData];
         
-        // Фильтр по категории
         if (category !== 'all') {
             filtered = filtered.filter(s => s.category === category);
         }
         
-        // Фильтр по филиалу
         if (branch !== 'all') {
             filtered = filtered.filter(s => s.branch === branch);
         }
         
-        // Фильтр по датам
         const now = new Date();
         let startDate = null;
         let endDate = null;
@@ -464,7 +460,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 endDate = now;
         }
         
-        // Применяем фильтр по датам
         filtered = filtered.filter(s => {
             if (!s.date) return true;
             const supplierDate = new Date(s.date);
@@ -728,6 +723,8 @@ document.addEventListener('DOMContentLoaded', () => {
         makeTableSortable('#budget-detail-table');
     }
     
+    // ========== ИСПРАВЛЕННАЯ ФУНКЦИЯ РЕНДЕРА ТАБЛИЦЫ РЕКОМЕНДАЦИЙ ==========
+    
     function renderOrderProposalTable(data) {
         const tableBody = document.querySelector('#order-proposal-table tbody');
         if (!tableBody) return;
@@ -741,13 +738,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const recommended = Math.max(0, adjustedForecast - item.stock - item.inTransit);
             const row = document.createElement('tr');
             row.innerHTML = `
-                <tr>${item.name} (${item.sku})</td>
-                <td>${item.stock}</td>
-                <td>${adjustedForecast} <span style="font-size:0.7em;">(x${multiplier})</span></td>
-                <td>${item.inTransit}</td>
-                <td>${recommended}</td>
-                <td><input type="number" value="${recommended}" min="0" style="width:70px;padding:4px;"></td>
-                <td>${item.basis}</td>
+                <td style="white-space: nowrap;">${item.name}</td>
+                <td style="white-space: nowrap;">${item.stock}</td>
+                <td style="white-space: nowrap;">${adjustedForecast} <span style="font-size:0.7em;">(x${multiplier})</span></td>
+                <td style="white-space: nowrap;">${item.inTransit}</td>
+                <td style="white-space: nowrap;">${recommended}</td>
+                <td><input type="number" value="${recommended}" min="0" style="width:80px; padding:5px; border:1px solid #ccc; border-radius:4px;"></td>
+                <td style="white-space: nowrap;">${item.basis}</td>
             `;
             tableBody.appendChild(row);
         });
@@ -862,8 +859,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showNotification('Анализ "что если" выполнен', 'success');
     });
     
-    
-    // ========== ЭКСПОРТ EXCEL ==========
+    // ========== ИСПРАВЛЕННЫЙ ЭКСПОРТ В EXCEL ==========
     
     document.getElementById('global-export-excel-btn')?.addEventListener('click', () => {
         const activePage = document.querySelector('.page.active');
@@ -871,23 +867,29 @@ document.addEventListener('DOMContentLoaded', () => {
         let worksheetData = [];
         let sheetName = '';
         
+        console.log('Экспорт страницы:', pageId);
+        
         if (pageId === 'supplier-analytics') {
             const table = document.querySelector('#supplier-kpi-table');
             if (table) {
                 const rows = table.querySelectorAll('tr');
                 rows.forEach(row => {
                     const rowData = [];
-                    row.querySelectorAll('th, td').forEach((cell, idx) => {
-                        if (idx === 7) return;
+                    const cells = row.querySelectorAll('th, td');
+                    cells.forEach((cell, idx) => {
+                        if (idx === cells.length - 1 && cell.classList?.contains('supplier-actions')) return;
                         let text = cell.innerText.trim();
                         text = text.replace(/[↓↑⇅]/g, '').trim();
-                        if (text && !text.includes('Редактировать') && !text.includes('Удалить')) rowData.push(text);
+                        if (text && !text.includes('Редактировать') && !text.includes('Удалить') && text !== 'Действия') {
+                            rowData.push(text);
+                        }
                     });
                     if (rowData.length > 0) worksheetData.push(rowData);
                 });
                 sheetName = 'Аналитика_поставщиков';
             }
-        } else if (pageId === 'budget-pf') {
+        } 
+        else if (pageId === 'budget-pf') {
             const table = document.querySelector('#budget-detail-table');
             if (table) {
                 const rows = table.querySelectorAll('tr');
@@ -902,82 +904,99 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 sheetName = 'План_факт_бюджета';
             }
-        } else if (pageId === 'order-recommendations') {
+        } 
+        else if (pageId === 'order-recommendations') {
             const table = document.querySelector('#order-proposal-table');
             if (table) {
                 const rows = table.querySelectorAll('tr');
                 rows.forEach(row => {
                     const rowData = [];
                     row.querySelectorAll('th, td').forEach((cell, idx) => {
-                        if (idx === 5 && cell.querySelector('input')) rowData.push(cell.querySelector('input').value);
-                        else { let text = cell.innerText.trim(); text = text.replace(/[↓↑⇅]/g, '').trim(); if (text) rowData.push(text); }
+                        if (idx === 5 && cell.querySelector('input')) {
+                            rowData.push(cell.querySelector('input').value);
+                        } else {
+                            let text = cell.innerText.trim();
+                            text = text.replace(/[↓↑⇅]/g, '').trim();
+                            if (text) rowData.push(text);
+                        }
                     });
                     if (rowData.length > 0) worksheetData.push(rowData);
                 });
                 sheetName = 'Рекомендации_по_закупкам';
             }
-        } else if (pageId === 'forecast') {
+        } 
+        else if (pageId === 'forecast') {
             const table = document.querySelector('#roi-table');
             if (table) {
                 const rows = table.querySelectorAll('tr');
                 rows.forEach(row => {
                     const rowData = [];
-                    row.querySelectorAll('th, td').forEach(cell => rowData.push(cell.innerText.trim()));
+                    row.querySelectorAll('th, td').forEach(cell => {
+                        let text = cell.innerText.trim();
+                        text = text.replace(/[↓↑⇅]/g, '').trim();
+                        if (text) rowData.push(text);
+                    });
                     if (rowData.length > 0) worksheetData.push(rowData);
                 });
                 sheetName = 'ROI_аналитика';
             }
         }
         
-        if (worksheetData.length === 0) { showNotification('Нет данных для экспорта', 'warning'); return; }
-        const ws = XLSX.utils.aoa_to_sheet(worksheetData);
-        ws['!cols'] = worksheetData[0]?.map(() => ({ wch: 20 })) || [];
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, sheetName);
-        XLSX.writeFile(wb, `${sheetName}_${new Date().toISOString().slice(0,19)}.xlsx`);
-        showNotification(`✅ Экспорт "${sheetName}" завершен`, 'success');
+        if (worksheetData.length === 0) {
+            showNotification('Нет данных для экспорта', 'warning');
+            return;
+        }
+        
+        try {
+            const ws = XLSX.utils.aoa_to_sheet(worksheetData);
+            const colWidths = [];
+            for (let i = 0; i < (worksheetData[0]?.length || 0); i++) {
+                let maxLen = 0;
+                for (let j = 0; j < worksheetData.length; j++) {
+                    const cellLen = String(worksheetData[j][i] || '').length;
+                    if (cellLen > maxLen) maxLen = cellLen;
+                }
+                colWidths.push({ wch: Math.min(maxLen + 2, 40) });
+            }
+            ws['!cols'] = colWidths;
+            
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, sheetName);
+            XLSX.writeFile(wb, `${sheetName}_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.xlsx`);
+            showNotification(`✅ Экспорт "${sheetName}" завершен`, 'success');
+        } catch (error) {
+            console.error('Ошибка экспорта:', error);
+            showNotification('Ошибка при экспорте', 'warning');
+        }
     });
     
-    // ========== ПЕРЕДАЧА В 1С ==========
+    // ========== ИСПРАВЛЕННАЯ ПЕРЕДАЧА В 1С ==========
     
     function showTransferDialog(proposals) {
-        const existingDialog = document.querySelector('.custom-transfer-dialog');
-        if (existingDialog) existingDialog.remove();
+        const action = confirm(
+            `📦 Будет передано ${proposals.length} позиций в 1С:\n\n` +
+            proposals.map(p => `• ${p.name}: ${p.quantity} шт. (${p.sku})`).join('\n') +
+            `\n\nНажмите "OK" для сохранения в localStorage\nНажмите "Отмена" для скачивания JSON файла`
+        );
         
-        const dialog = document.createElement('div');
-        dialog.className = 'custom-transfer-dialog';
-        dialog.innerHTML = `
-            <div class="custom-transfer-overlay">
-                <div class="custom-transfer-content">
-                    <div class="custom-transfer-header"><i class="fas fa-exchange-alt"></i><h3>Передача в 1С</h3></div>
-                    <div class="custom-transfer-body">
-                        <div class="transfer-icon"><i class="fas fa-boxes"></i></div>
-                        <p class="transfer-count">📦 Будет передано <strong>${proposals.length}</strong> позиций</p>
-                        <div class="transfer-items-preview">${proposals.slice(0, 5).map(p => `<div class="transfer-item"><span class="item-name">${p.name}</span><span class="item-quantity">${p.quantity} шт.</span></div>`).join('')}${proposals.length > 5 ? `<div class="transfer-more">...и ещё ${proposals.length - 5} позиций</div>` : ''}</div>
-                    </div>
-                    <div class="custom-transfer-buttons">
-                        <button id="transfer-save-btn" class="transfer-btn save-btn"><i class="fas fa-database"></i> Сохранить в localStorage</button>
-                        <button id="transfer-download-btn" class="transfer-btn download-btn"><i class="fas fa-download"></i> Скачать JSON</button>
-                        <button id="transfer-cancel-btn" class="transfer-btn cancel-btn"><i class="fas fa-times"></i> Отмена</button>
-                    </div>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(dialog);
-        
-        const style = document.createElement('style');
-        style.textContent = `.custom-transfer-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;justify-content:center;align-items:center;z-index:30000}.custom-transfer-content{background:var(--bg-secondary);border-radius:16px;width:90%;max-width:450px;animation:slideUp 0.3s}.custom-transfer-header{background:linear-gradient(135deg,#667eea,#764ba2);color:white;padding:20px;text-align:center}.custom-transfer-header i{font-size:2em}.custom-transfer-header h3{margin:10px 0 0}.custom-transfer-body{padding:25px;text-align:center}.transfer-icon i{font-size:3em;color:#27ae60}.transfer-count{font-size:1.1em;margin-bottom:20px}.transfer-items-preview{background:var(--bg-primary);border-radius:12px;padding:15px;max-height:200px;overflow-y:auto}.transfer-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-color)}.item-quantity{font-weight:bold;color:#27ae60}.transfer-more{text-align:center;padding-top:10px;color:var(--text-secondary);font-style:italic}.custom-transfer-buttons{display:flex;gap:10px;padding:20px;background:var(--bg-primary);flex-wrap:wrap}.transfer-btn{flex:1;padding:12px;border:none;border-radius:8px;cursor:pointer;font-weight:500;display:flex;align-items:center;justify-content:center;gap:8px}.save-btn{background:linear-gradient(135deg,#667eea,#764ba2);color:white}.download-btn{background:linear-gradient(135deg,#27ae60,#2ecc71);color:white}.cancel-btn{background:#e74c3c;color:white}.transfer-btn:hover{transform:translateY(-2px)}@keyframes slideUp{from{transform:translateY(50px);opacity:0}to{transform:translateY(0);opacity:1}}`;
-        document.head.appendChild(style);
-        
-        document.getElementById('transfer-save-btn').onclick = () => {
+        if (action) {
             const saved = JSON.parse(localStorage.getItem('1c_transfers') || '[]');
-            saved.push({ id: Date.now(), branch: document.getElementById('order-branch')?.value || 'all', items: proposals, date: new Date().toISOString() });
+            saved.push({
+                id: Date.now(),
+                branch: document.getElementById('order-branch')?.value || 'all',
+                items: proposals,
+                date: new Date().toISOString()
+            });
             localStorage.setItem('1c_transfers', JSON.stringify(saved));
             showNotification(`✅ Сохранено локально. Всего передач: ${saved.length}`, 'success');
-            dialog.remove(); style.remove();
-        };
-        document.getElementById('transfer-download-btn').onclick = () => {
-            const data = { branch: document.getElementById('order-branch')?.value || 'all', items: proposals, exportDate: new Date().toISOString(), user: 'Менеджер закупок' };
+            console.log('Сохранено в localStorage:', saved);
+        } else {
+            const data = {
+                branch: document.getElementById('order-branch')?.value || 'all',
+                items: proposals,
+                exportDate: new Date().toISOString(),
+                user: 'Менеджер закупок'
+            };
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -986,23 +1005,43 @@ document.addEventListener('DOMContentLoaded', () => {
             a.click();
             URL.revokeObjectURL(url);
             showNotification(`✅ Файл сохранён`, 'success');
-            dialog.remove(); style.remove();
-        };
-        document.getElementById('transfer-cancel-btn').onclick = () => { dialog.remove(); style.remove(); showNotification('Передача отменена', 'info'); };
-        dialog.querySelector('.custom-transfer-overlay').onclick = (e) => { if (e.target === dialog.querySelector('.custom-transfer-overlay')) { dialog.remove(); style.remove(); } };
+        }
     }
     
     document.getElementById('transfer-to-1c')?.addEventListener('click', () => {
         const proposals = [];
-        document.querySelectorAll('#order-proposal-table tbody tr').forEach(row => {
+        const rows = document.querySelectorAll('#order-proposal-table tbody tr');
+        
+        console.log('Найдено строк:', rows.length);
+        
+        rows.forEach((row, index) => {
             const input = row.cells[5]?.querySelector('input');
-            if (input && parseInt(input.value) > 0) {
-                const skuMatch = row.cells[0].innerText.match(/\(([^)]+)\)/);
-                proposals.push({ sku: skuMatch ? skuMatch[1] : 'N/A', quantity: parseInt(input.value), name: row.cells[0].innerText.split('(')[0].trim() });
+            const quantity = input ? parseInt(input.value) : 0;
+            
+            console.log(`Строка ${index}: quantity = ${quantity}`);
+            
+            if (quantity > 0) {
+                const nameCell = row.cells[0]?.innerText || '';
+                const skuMatch = nameCell.match(/\(([^)]+)\)/);
+                const sku = skuMatch ? skuMatch[1] : 'N/A';
+                const productName = nameCell.split('(')[0].trim();
+                
+                proposals.push({
+                    sku: sku,
+                    quantity: quantity,
+                    name: productName
+                });
             }
         });
-        if (proposals.length === 0) showNotification('Нет товаров для передачи', 'warning');
-        else showTransferDialog(proposals);
+        
+        console.log('Товары для передачи:', proposals);
+        
+        if (proposals.length === 0) {
+            showNotification('Нет товаров для передачи. Введите количество > 0 в столбце "Введенное кол-во"', 'warning');
+            return;
+        }
+        
+        showTransferDialog(proposals);
     });
     
     document.getElementById('calculate-roi')?.addEventListener('click', () => {
@@ -1115,7 +1154,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 dateRangeGroup.style.display = 'none';
                 document.getElementById('date-from').value = '';
                 document.getElementById('date-to').value = '';
-                // Принудительно обновляем данные при смене периода
                 applyFiltersAndRender();
                 updateCharts();
                 renderTopSuppliersChart();
